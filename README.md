@@ -1,1 +1,1 @@
-# Tamograf
+# Tomograf
