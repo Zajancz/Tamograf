@@ -16,3 +16,7 @@ Tomograph provides the ability to configure several elements, such as the step â
 
  </p>
 
+![alt text](https://github.com/Zajancz/Tomograf/blob/main/Images/Screenshot_1.png)
+
+ 
+![alt text](https://github.com/Zajancz/Tomograf/blob/main/Images/Screenshot_2.png)
