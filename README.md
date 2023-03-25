@@ -13,8 +13,6 @@ Tomograph takes grayscale images as input and uses a parallel emitter/detector m
 <p align="justify">
 Tomograph provides the ability to configure several elements, such as the step ∆α of the emitter/detector system, the number of detectors (n) for one emitter/detector system, and the width/span of the emitter/detector system (l).
  </p>
-<<<<<<< HEAD
+
  </p>
-=======
- </p>
->>>>>>> 630d7b6a6f87de76b4c4a54d8b5a8f303956387a
+
