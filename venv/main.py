@@ -3,7 +3,6 @@ import numpy as np
 import cv2
 
 
-
 def generate_points_between_2(coordinates, width):
     """
     Generate a list of points for a line given two points and a width.
@@ -20,9 +19,10 @@ def generate_points_between_2(coordinates, width):
     x1, y1, x2, y2 = map(int, coordinates)
     abs_x, abs_y = np.abs([x2 - x1, y2 - y1])
     dif_x, dif_y = np.sign([x2 - x1, y2 - y1])
-    result = [(x, y) for x, y in genetate_points_for_line(x1, y1,x2, y2, abs_x, abs_y, dif_x, dif_y)
+    result = [(x, y) for x, y in genetate_points_for_line(x1, y1, x2, y2, abs_x, abs_y, dif_x, dif_y)
               if ((x - width / 2) ** 2 + (y - width / 2) ** 2) <= (width / 2) ** 2]
     return result
+
 
 def genetate_points_for_line(x1, y1, x2, y2, abs_x, abs_y, dif_x, dif_y):
     """
@@ -111,7 +111,6 @@ def value_of_line(line, width, height, image_read, additive_or_substractive):
         return np.array(result, dtype=np.float32) if len(result) > 0 else np.zeros(1, dtype=np.float32)
 
 
-
 def sinogram_creation(image_read, sinogram_image, width, height):
     """
     Create a sinogram matrix from an image.
@@ -168,7 +167,8 @@ def sinogram_creation(image_read, sinogram_image, width, height):
 
         if additive_or_substractive:
             # Scale the sin array to the range [0, 255]
-            sinogram_array = (sinogram_array - np.min(sinogram_array)) * (256 / (np.max(sinogram_array) - np.min(sinogram_array)))
+            sinogram_array = (sinogram_array - np.min(sinogram_array)) * (
+                        256 / (np.max(sinogram_array) - np.min(sinogram_array)))
             # Invert the values in the sin array
             sinogram_array = 255 - sinogram_array
 
@@ -181,6 +181,7 @@ def sinogram_creation(image_read, sinogram_image, width, height):
 
         return print(sinogram_image)
     print("For future use")
+
 
 if __name__ == '__main__':
     image = 'Images\kolko.png'
@@ -195,7 +196,7 @@ if __name__ == '__main__':
     width, height = np.shape(image_read)
     print("Width:{w}\t Height:{h}".format(w=width, h=height))
 
-    if  width != height:
+    if width != height:
         raise Exception("Sorry, the picture isn`t squared")
 
     sinogram_creation(image_read, sinogram_image, width, height)
