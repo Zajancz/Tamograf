@@ -82,14 +82,14 @@ def value_of_line(line, width, height, image_read, additive_or_substractive):
     """
     Calculate the value of a single line on an image.
 
-    Args:
+    Args:\n
     line (list): A list of tuples representing the coordinates of the points
-    that make up the line.
-    width (int): The width of the image.
-    height (int): The height of the image.
-    image_read (np.ndarray): A numpy array representing the image.
+    that make up the line.\n
+    width (int): The width of the image.\n
+    height (int): The height of the image.\n
+    image_read (np.ndarray): A numpy array representing the image.\n
     additive_or_substractive (bool): A boolean value indicating whether to use an experimental
-    method of calculating the line value.
+    method of calculating the line value.\n
 
     Returns:
     float or np.ndarray: The calculated value of the line.
@@ -130,8 +130,8 @@ def sinogram_creation(image_read, sinogram_image, width, height):
         additive_or_substractive = True
         sinogram_array, lines_array = [], []
         angle = 1
-        angulation = np.linspace(0, 180 - angle, num=180 // angle)
-
+        angulation = np.linspace(0, 360 - angle, num=360 // angle)
+        print(angulation)
         tmp_for_biases = None
         tmp_for_emitters = None
 
@@ -147,7 +147,7 @@ def sinogram_creation(image_read, sinogram_image, width, height):
 
         # evenly spaced numbers
         biases = np.arange(-space_biases / 2, space_biases / 2, space_biases / space_emitters)
-
+        print(biases)
         i = 0
         while i < len(angulation):
             angle = angulation[i] * np.pi / 180
@@ -157,6 +157,7 @@ def sinogram_creation(image_read, sinogram_image, width, height):
                 bias = biases[j]
                 points = check_points_coordinates(angle, bias, width)
                 line = generate_points_between_2(points, width)
+
                 color = value_of_line(line, width, height, image_read, additive_or_substractive)
                 sinogram_array_row.append(color)
                 lines_array_row.append(line)
@@ -172,10 +173,11 @@ def sinogram_creation(image_read, sinogram_image, width, height):
             # Invert the values in the sin array
             sinogram_array = 255 - sinogram_array
 
-        sinogram_image = np.array(sinogram_array)
-
+        print(sinogram_array)
+        reversed_array = sinogram_array[::-1]
+        sinogram_image = np.array(reversed_array)
         plt.subplot(122)
-        plt.imshow(sinogram_image, cmap='gray', aspect='auto')
+        plt.imshow(sinogram_image, cmap='gray', aspect='0.3')
         plt.title('Sinogram')
         plt.show()
 
