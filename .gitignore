@@ -1,0 +1,11 @@
+Pipfile.lock
+.idea
+src/__pycache__/
+__pycache__/
+*/__pycache__/*
+*/__pycache__/
+*/Lib/
+*/Lib
+*/Scripts
+*/Scripts/
+*/share

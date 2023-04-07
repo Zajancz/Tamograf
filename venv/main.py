@@ -3,7 +3,6 @@ import numpy as np
 import cv2
 
 
-
 def generate_points_between_2(coordinates, width):
     """
     Generate a list of points for a line given two points and a width.
@@ -20,9 +19,10 @@ def generate_points_between_2(coordinates, width):
     x1, y1, x2, y2 = map(int, coordinates)
     abs_x, abs_y = np.abs([x2 - x1, y2 - y1])
     dif_x, dif_y = np.sign([x2 - x1, y2 - y1])
-    result = [(x, y) for x, y in genetate_points_for_line(x1, y1,x2, y2, abs_x, abs_y, dif_x, dif_y)
+    result = [(x, y) for x, y in genetate_points_for_line(x1, y1, x2, y2, abs_x, abs_y, dif_x, dif_y)
               if ((x - width / 2) ** 2 + (y - width / 2) ** 2) <= (width / 2) ** 2]
     return result
+
 
 def genetate_points_for_line(x1, y1, x2, y2, abs_x, abs_y, dif_x, dif_y):
     """
@@ -82,14 +82,14 @@ def value_of_line(line, width, height, image_read, additive_or_substractive):
     """
     Calculate the value of a single line on an image.
 
-    Args:
+    Args:\n
     line (list): A list of tuples representing the coordinates of the points
-    that make up the line.
-    width (int): The width of the image.
-    height (int): The height of the image.
-    image_read (np.ndarray): A numpy array representing the image.
+    that make up the line.\n
+    width (int): The width of the image.\n
+    height (int): The height of the image.\n
+    image_read (np.ndarray): A numpy array representing the image.\n
     additive_or_substractive (bool): A boolean value indicating whether to use an experimental
-    method of calculating the line value.
+    method of calculating the line value.\n
 
     Returns:
     float or np.ndarray: The calculated value of the line.
@@ -111,7 +111,6 @@ def value_of_line(line, width, height, image_read, additive_or_substractive):
         return np.array(result, dtype=np.float32) if len(result) > 0 else np.zeros(1, dtype=np.float32)
 
 
-
 def sinogram_creation(image_read, sinogram_image, width, height):
     """
     Create a sinogram matrix from an image.
@@ -131,8 +130,8 @@ def sinogram_creation(image_read, sinogram_image, width, height):
         additive_or_substractive = True
         sinogram_array, lines_array = [], []
         angle = 1
-        angulation = np.linspace(0, 180 - angle, num=180 // angle)
-
+        angulation = np.linspace(0, 360 - angle, num=360 // angle)
+        print(angulation)
         tmp_for_biases = None
         tmp_for_emitters = None
 
@@ -148,7 +147,7 @@ def sinogram_creation(image_read, sinogram_image, width, height):
 
         # evenly spaced numbers
         biases = np.arange(-space_biases / 2, space_biases / 2, space_biases / space_emitters)
-
+        print(biases)
         i = 0
         while i < len(angulation):
             angle = angulation[i] * np.pi / 180
@@ -158,6 +157,7 @@ def sinogram_creation(image_read, sinogram_image, width, height):
                 bias = biases[j]
                 points = check_points_coordinates(angle, bias, width)
                 line = generate_points_between_2(points, width)
+
                 color = value_of_line(line, width, height, image_read, additive_or_substractive)
                 sinogram_array_row.append(color)
                 lines_array_row.append(line)
@@ -168,19 +168,22 @@ def sinogram_creation(image_read, sinogram_image, width, height):
 
         if additive_or_substractive:
             # Scale the sin array to the range [0, 255]
-            sinogram_array = (sinogram_array - np.min(sinogram_array)) * (256 / (np.max(sinogram_array) - np.min(sinogram_array)))
+            sinogram_array = (sinogram_array - np.min(sinogram_array)) * (
+                        256 / (np.max(sinogram_array) - np.min(sinogram_array)))
             # Invert the values in the sin array
             sinogram_array = 255 - sinogram_array
 
-        sinogram_image = np.array(sinogram_array)
-
+        print(sinogram_array)
+        reversed_array = sinogram_array[::-1]
+        sinogram_image = np.array(reversed_array)
         plt.subplot(122)
-        plt.imshow(sinogram_image, cmap='gray', aspect='auto')
+        plt.imshow(sinogram_image, cmap='gray', aspect='0.3')
         plt.title('Sinogram')
         plt.show()
 
         return print(sinogram_image)
     print("For future use")
+
 
 if __name__ == '__main__':
     image = 'Images\kolko.png'
@@ -195,7 +198,7 @@ if __name__ == '__main__':
     width, height = np.shape(image_read)
     print("Width:{w}\t Height:{h}".format(w=width, h=height))
 
-    if  width != height:
+    if width != height:
         raise Exception("Sorry, the picture isn`t squared")
 
     sinogram_creation(image_read, sinogram_image, width, height)
