@@ -1,11 +1,12 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import cv2
-
+import skimage
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage.transform import iradon
 
 def generate_points_between_2(coordinates, width):
     """
-    Generate a list of points for a line given two points and a width.
+    Generates a list of coordinates(points) for a line segment given its starting and ending points
 
     Args:
         coordinates (list): A list of four elements containing the x and y coordinates
@@ -16,9 +17,22 @@ def generate_points_between_2(coordinates, width):
         list: A list of points in the format [(x1, y1), (x2, y2), ...] that make
             up the line with the given width.
     """
+    # convert the input coordinates (a list or tuple of four integers) into four separate integers
     x1, y1, x2, y2 = map(int, coordinates)
+    """
+    Calculating the absolute difference(length of the line segment) and sign between the x and y coordinates of the 
+    two points (direction)  is a way to determine the direction and magnitude of the line segment that connects them.
+    Direction will be either 1 or -1, depending on whether the x and y coordinates of the second point are 
+    greater than or less than those of the first point.
+    """
     abs_x, abs_y = np.abs([x2 - x1, y2 - y1])
     dif_x, dif_y = np.sign([x2 - x1, y2 - y1])
+    """
+    The final line filters the generated coordinates to only include those that fall within a circle with radius equal 
+    to width / 2 and centered at (width / 2, width / 2). This is achieved by using a list comprehension that checks if
+    the distance between each coordinate and the center of the circle is less than or equal to width / 2.
+    """
+    # generates a list of coordinates by generate_points_for_line
     result = [(x, y) for x, y in genetate_points_for_line(x1, y1, x2, y2, abs_x, abs_y, dif_x, dif_y)
               if ((x - width / 2) ** 2 + (y - width / 2) ** 2) <= (width / 2) ** 2]
     return result
@@ -40,8 +54,13 @@ def genetate_points_for_line(x1, y1, x2, y2, abs_x, abs_y, dif_x, dif_y):
         list: A list of points in the format [(x1, y1), (x2, y2), ...] that make
             up the line.
     """
+    # initializes a list containing the starting point of the line segment
     result = [(x1, y1)]
+    # this value will be used to determine which direction to move along the line segment as new points are generated.
+    # error bound
     e = abs_x - abs_y
+    # starting from the initial point and adding one point at a time until the final point is reached
+    # Bresenham's line algorithm
     while (x1 != x2) or (y1 != y2):
         e2 = e * 2
         if e2 > -abs_y:
@@ -57,6 +76,8 @@ def genetate_points_for_line(x1, y1, x2, y2, abs_x, abs_y, dif_x, dif_y):
 def check_points_coordinates(angle, bias, width):
     """
     Calculate the positions of two points on a circle (opposite, in I and III) with the given `angle`, `bias`, and `width`.
+    this code appears to define a function that generates the coordinates of a rectangle with a certain width,
+    rotated at a certain angle and translated by a certain distance.
 
     Args:
         angle (float): The angle in radians of the points relative to the positive x-axis.
@@ -67,9 +88,20 @@ def check_points_coordinates(angle, bias, width):
         List[float]: A list of four floats representing the x and y coordinates of the two points,
         in the order (x1, y1, x2, y2).
     """
+    # calculates the radius of the rectangle
     radius = width / 2
+    """
+    calculate the x and y coordinates of a point on the circumference of a circle with radius equal to the "bias"
+    input parameter, at an angle that is 90 degrees clockwise from the angle input parameter
+    This point will be used to translate the rectangle later.
+    """
     x_coordinate = bias * np.cos(angle + np.pi / 2)
     y_coordinate = bias * np.sin(angle + np.pi / 2)
+    """
+    use the radius and angle input parameters, along with the previously calculated point, to determine the four 
+    corners of the rectangle. The first two coordinates correspond to the top right corner of the rectangle,
+    while the last two coordinates correspond to the bottom left corner of the rectangle.
+    """
     return [
         radius * np.cos(angle) + x_coordinate + radius,
         radius * np.sin(angle) + y_coordinate + radius,
@@ -80,125 +112,197 @@ def check_points_coordinates(angle, bias, width):
 
 def value_of_line(line, width, height, image_read, additive_or_substractive):
     """
-    Calculate the value of a single line on an image.
+    The code takes a line represented as a list of (x, y) coordinates and reads the pixel values of an image at
+    those coordinates. The sum of the pixel values is normalized by the total number of coordinates in the line.
+    This normalization makes the contrast measure more robust. Finally, the exponential of the negative of the
+    normalized value is calculated to create a measure of the contrast of the line. The exponential function
+    is used to transform the contrast measure into a more intuitive and interpretable range, where higher
+    values indicate higher contrast. The negative sign is used to invert the contrast measure so that
+    higher values indicate higher contrast, consistent with most other image processing functions.
 
-    Args:\n
+    Args:
     line (list): A list of tuples representing the coordinates of the points
-    that make up the line.\n
-    width (int): The width of the image.\n
-    height (int): The height of the image.\n
-    image_read (np.ndarray): A numpy array representing the image.\n
+    that make up the line.
+    width (int): The width of the image.
+    height (int): The height of the image.
+    image_read (np.ndarray): A numpy array representing the image.
     additive_or_substractive (bool): A boolean value indicating whether to use an experimental
-    method of calculating the line value.\n
+    method of calculating the line value.
 
     Returns:
     float or np.ndarray: The calculated value of the line.
     """
-    result = []
+    result = []  # initialize an empty list to store pixel values
     i = 0
     while i < len(line):
-        x, y = line[i]
-        if 0 <= x < width and 0 <= y < height:
+        x, y = line[i]  # get the x and y coordinates of the current element
+        if 0 <= x < width and 0 <= y < height:  # check if the x and y coordinates are within the bounds of the image
+            # if the x and y coordinates are within the bounds of the image, read the pixel value from the image and
+            # add it to the result list
             result.append(image_read[y, x])
         i += 1
 
     if additive_or_substractive:
         if len(line) > 0:
+            # calculate the contrast measure by taking the negative exponential of the average pixel value of the line
+            # normalized by 255 and the length of the line
             return np.exp(-(sum(result) / (255 * len(line))))
         else:
-            return np.exp(-0)
+            return np.exp(-0)  # if there are no elements in the line, return 1
     else:
+        # return an array of pixel values of the line if there are any, else return an array of 0 with length 1
         return np.array(result, dtype=np.float32) if len(result) > 0 else np.zeros(1, dtype=np.float32)
 
 
-def sinogram_creation(image_read, sinogram_image, width, height):
+def sinogram_creation(image_read, width, height, angle, number_of_detectors, number_of_emitters, additive_or_substractive=True):
+
+    sinogram_array, lines_array = [], []
+
     """
-    Create a sinogram matrix from an image.
-
-    Args:
-    image_read (np.ndarray): A numpy array representing the image.
-    sinogram_image (np.ndarray): A numpy array representing the sinogram image.
-    width (int): The width of the image.
-    height (int): The height of the image.
-
-    Returns:
-    np.ndarray: A numpy array representing the sinogram image.
+    The purpose of this lines of code is to generate a sequence of angles at which to take projections of the 
+    input image. The angle variable represents the step size between each angle in degrees, and in this case is 
+    set to 4. The np.linspace() function is then used to generate an array of angles between 0 and 360 (exclusive)
+    with a step size of angle
     """
-    if sinogram_image is None:
-        if image_read is None:
-            raise Exception("Sorry, the picture wasn`t loaded")
-        additive_or_substractive = True
-        sinogram_array, lines_array = [], []
-        angle = 1
-        angulation = np.linspace(0, 360 - angle, num=360 // angle)
-        print(angulation)
-        tmp_for_biases = None
-        tmp_for_emitters = None
 
-        if tmp_for_biases is not None:
-            space_biases = tmp_for_biases
-        else:
-            space_biases = image_read.shape[0]
+    angulation = np.linspace(0, 360 - angle, num=360 // angle)
 
-        if tmp_for_emitters is not None:
-            space_emitters = tmp_for_emitters
-        else:
-            space_emitters = image_read.shape[0]
+    """
+    If tmp_for_biases and tmp_for_emitters are provided, they will be used to set the number of biases and emitters,
+    respectively. If they are not provided (i.e., they are set to None), the default value will be the height 
+    of the image_read
 
-        # evenly spaced numbers
-        biases = np.arange(-space_biases / 2, space_biases / 2, space_biases / space_emitters)
-        print(biases)
-        i = 0
-        while i < len(angulation):
-            angle = angulation[i] * np.pi / 180
-            sinogram_array_row, lines_array_row = [], []
-            j = 0
-            while j < len(biases):
-                bias = biases[j]
-                points = check_points_coordinates(angle, bias, width)
-                line = generate_points_between_2(points, width)
+    Setting the number of biases and emitters is important because it affects the quality of the 
+    sinogram image. Having more biases and emitters will result in a higher resolution sinogram, which can 
+    lead to a better output image
+    """
 
-                color = value_of_line(line, width, height, image_read, additive_or_substractive)
-                sinogram_array_row.append(color)
-                lines_array_row.append(line)
-                j += 1
-            sinogram_array.append(sinogram_array_row)
-            lines_array.append(lines_array_row)
-            i += 1
+    if number_of_detectors is not None:
+        space_biases = number_of_detectors
+    else:
+        space_biases = image_read.shape[0]
 
-        if additive_or_substractive:
-            # Scale the sin array to the range [0, 255]
-            sinogram_array = (sinogram_array - np.min(sinogram_array)) * (
-                        256 / (np.max(sinogram_array) - np.min(sinogram_array)))
-            # Invert the values in the sin array
-            sinogram_array = 255 - sinogram_array
-
-        print(sinogram_array)
-        reversed_array = sinogram_array[::-1]
-        sinogram_image = np.array(reversed_array)
-        plt.subplot(122)
-        plt.imshow(sinogram_image, cmap='gray', aspect='0.3')
-        plt.title('Sinogram')
-        plt.show()
-
-        return print(sinogram_image)
-    print("For future use")
+    if number_of_emitters is not None:
+        space_emitters = number_of_emitters
+    else:
+        space_emitters = image_read.shape[0]
 
 
-if __name__ == '__main__':
-    image = 'Images\kolko.png'
-    sinogram_image = None
-    # read an image in grayscale mode
-    image_read = cv2.imread(image, 0)
+    """
+    This line of code creates an array biases with values that represent the positions of the sensors or 
+    detectors relative to the center of the object being imaged.
 
-    plt.subplot(121)
+    The np.arange() function returns evenly spaced values within a given interval. In this case, the interval is 
+    from -space_biases/2 to space_biases/2, and the spacing between each value is space_biases/space_emitters.
+    
+    The purpose of creating this biases array is to use it in the generation of the sinogram, 
+    which is a two-dimensional array that contains the projections of the image onto the sensors at different
+    angles. Each row of the sinogram corresponds to a different angle of projection, and each column 
+    corresponds to a different position of the sensors or detectors.
+    """
+    biases = np.arange(-space_biases / 2, space_biases / 2, space_biases / space_emitters)
+
+    i = 0
+    while i < len(angulation):
+        """
+        Here, angulation[i] represents the angle at which to take the projection at the i-th iteration
+        of the loop. The angle is then converted from degrees to radians and used to calculate the points 
+        at which to take the projection, as seen in the check_points_coordinates() function.
+        """
+        angle = angulation[i] * np.pi / 180
+        sinogram_array_row, lines_array_row = [], []
+        j = 0
+        while j < len(biases):
+            """
+            bias(position of the sensors or detectors) variable is used to calculate the coordinates of the 
+            line in the image
+            """
+            bias = biases[j]
+            # returns the coordinates of some key points on the object
+            points = check_points_coordinates(angle, bias, width)
+            # takes the points returned by the previous function and generates a line or curve that connects them
+            line = generate_points_between_2(points, width)
+            # calculates property of the line based on its position and the image data
+            color = value_of_line(line, width, height, image_read, additive_or_substractive)
+            # this array is being used to accumulate information about the image
+            sinogram_array_row.append(color)
+            # this array is being used to keep track of the lines generated during the image processing task
+            lines_array_row.append(line)
+            j += 1
+        sinogram_array.append(sinogram_array_row)
+        lines_array.append(lines_array_row)
+        i += 1
+
+    """
+    This is done to create a negative image, where dark areas in the original image become light 
+    and light areas become dark
+    """
+    if additive_or_substractive:
+        # Scale the sin array to the range [0, 255]. This is done to ensure that all the values
+        # in the array are within the valid range for pixel values in an 8-bit image
+        sinogram_array = (sinogram_array - np.min(sinogram_array)) * (
+                   256 / (np.max(sinogram_array) - np.min(sinogram_array)))
+        # Invert the values in the sin array
+        sinogram_array = 255 - sinogram_array
+
+    # Reverse the sinogram
+    reversed_array = sinogram_array[::-1]
+    sinogram_image = np.array(reversed_array)
+
+
+    reversed_image = Radon_transform_reverse(sinogram_image, width, height, lines_array)
+    plt.subplot(131)
     plt.imshow(image_read, cmap='gray')
     plt.title('Input Image')
 
+    plt.subplot(132)
+    plt.imshow(sinogram_image, cmap='gray')
+    plt.title('Sinogram')
+
+    plt.subplot(133)
+    plt.imshow(reversed_image, cmap='gray')
+    plt.title('Output Image (Unfiltered)')
+    plt.show()
+
+
+def Radon_transform_reverse(sinogram, width, height, lines_array):
+    # first initializes a 2D array with zeros
+    reconstructed_image = np.zeros((width, height))
+
+    """
+    Using nested loops we iterate over each element of the sinogram and the lines array. For each line in the lines 
+    array, the function iterates over each pixel in the line and adds the corresponding sinogram value to the 
+    corresponding pixel in the reconstructed_image array
+    """
+    line_idx = 0
+    while line_idx < sinogram.shape[0]:
+        angle_idx = 0
+        while angle_idx < sinogram.shape[1]:
+            pixel_idx = 0
+            while pixel_idx < len(lines_array[line_idx][angle_idx]):
+                pixel_x, pixel_y = lines_array[line_idx][angle_idx][pixel_idx]
+                if 0 <= pixel_x < width and 0 <= pixel_y < height:
+                    reconstructed_image[pixel_x, pixel_y] += sinogram[line_idx][angle_idx]
+                pixel_idx += 1
+            angle_idx += 1
+        line_idx += 1
+
+    # finally reverse an image
+    reversed_image = np.flipud(reconstructed_image)
+
+    return reversed_image
+
+if __name__ == '__main__':
+    image = 'Images\kolko.png'
+
+    # read an image in grayscale mode
+    image_read = cv2.imread(image, 0)
+
     width, height = np.shape(image_read)
-    print("Width:{w}\t Height:{h}".format(w=width, h=height))
+    print("Width {w}\t Height {h}".format(w=width, h=height))
 
-    if width != height:
-        raise Exception("Sorry, the picture isn`t squared")
+    sinogram_creation(image_read, width, height, 4, 220, 220, additive_or_substractive=True)
 
-    sinogram_creation(image_read, sinogram_image, width, height)
+
+
+
