@@ -139,22 +139,26 @@ def value_of_line(line, width, height, image_read, additive_or_substractive):
         if 0 <= x < width and 0 <= y < height:  # check if the x and y coordinates are within the bounds of the image
             # if the x and y coordinates are within the bounds of the image, read the pixel value from the image and
             # add it to the result list
-            result.append(image_read[y, x])
+            result.append(image_read[x, y])
         i += 1
 
     if additive_or_substractive:
         if len(line) > 0:
             # calculate the contrast measure by taking the negative exponential of the average pixel value of the line
             # normalized by 255 and the length of the line
-            return np.exp(-(sum(result) / (255 * len(line))))
+            normalize_sum = sum(result) / (255 * len(line))
+            return np.exp(-normalize_sum)
         else:
-            return np.exp(-0)  # if there are no elements in the line, return 1
+            return 0  # if there are no elements in the line, return 0
     else:
-        # return an array of pixel values of the line if there are any, else return an array of 0 with length 1
-        return np.array(result, dtype=np.float32) if len(result) > 0 else np.zeros(1, dtype=np.float32)
+        if len(result) > 0:
+            # return an array of pixel values of the line if there are any
+            return np.mean(result)
+        else:
+            return 0
 
 
-def sinogram_creation(image_read, width, height, angle, number_of_detectors, number_of_emitters, additive_or_substractive=True):
+def sinogram_creation(image_read, width, height, angle, number_of_detectors, number_of_emitters, additive_or_substractive):
 
     sinogram_array, lines_array = [], []
 
@@ -249,7 +253,6 @@ def sinogram_creation(image_read, width, height, angle, number_of_detectors, num
     reversed_array = sinogram_array[::-1]
     sinogram_image = np.array(reversed_array)
 
-
     reversed_image = Radon_transform_reverse(sinogram_image, width, height, lines_array)
     plt.subplot(131)
     plt.imshow(image_read, cmap='gray')
@@ -292,6 +295,7 @@ def Radon_transform_reverse(sinogram, width, height, lines_array):
 
     return reversed_image
 
+
 if __name__ == '__main__':
     image = 'Images\kolko.png'
 
@@ -301,7 +305,7 @@ if __name__ == '__main__':
     width, height = np.shape(image_read)
     print("Width {w}\t Height {h}".format(w=width, h=height))
 
-    sinogram_creation(image_read, width, height, 4, 220, 220, additive_or_substractive=True)
+    sinogram_creation(image_read, width, height, 1, 220, 220, additive_or_substractive=True)
 
 
 
