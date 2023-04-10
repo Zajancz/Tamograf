@@ -4,6 +4,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.transform import iradon
+from scipy import fftpack
 
 
 def generate_points_between_2(coordinates, width):
@@ -257,18 +258,30 @@ def sinogram_creation(image_read, width, height, angle, number_of_detectors, num
 
     # This line is used to generate reconstructed images at n-th scan iteration
     Radon_transform_reverse(sinogram_image, width, height, lines_array, iterations=75)
-    plt.subplot(131)
+
+    sinogram_filtered = Filter_Sinogram(sinogram_image, 45)
+    output_image_filtered, copy_image_n_iteration = Radon_transform_reverse(sinogram_filtered, width, height, lines_array)
+
+    plt.subplot(151)
     plt.imshow(image_read, cmap='gray')
     plt.title('Input Image')
 
-    plt.subplot(132)
+    plt.subplot(152)
     plt.imshow(sinogram_image, cmap='gray')
     plt.title('Sinogram')
 
     output_image, copy_image_n_iteration = Radon_transform_reverse(sinogram_image, width, height, lines_array)
-    plt.subplot(133)
+    plt.subplot(153)
     plt.imshow(output_image, cmap='gray')
-    plt.title('Output Image (Unfiltered)')
+    plt.title('Output Image')
+
+    plt.subplot(154)
+    plt.imshow(sinogram_filtered, cmap='gray')
+    plt.title('Filtered Sinogram')
+
+    plt.subplot(155)
+    plt.imshow(output_image_filtered, cmap='gray')
+    plt.title('Filtered Output Image')
     plt.show()
 
 
@@ -320,6 +333,39 @@ def Radon_transform_reverse(sinogram, width, height, lines_array, iterations=Non
 
     return reversed_image, copy_image_n_iteration
 
+
+def Filter_Sinogram(sinogram, mask_size=11):
+    # make a copy of the input sinogram array
+    sinogram_filtered = np.copy(sinogram)
+
+    # calculate the index of the middle element of the mask
+    element_in_the_middle = (mask_size - 1) // 2
+
+    # create an array of zeros with dimensions equal to the mask size
+    root = np.zeros((mask_size, mask_size))
+
+    # set the middle element to 1
+    root[element_in_the_middle, element_in_the_middle] = 1
+
+    # loop over half the mask size, starting from 1
+    for i in range(1, element_in_the_middle + 1):
+        # if i is odd, set the corresponding elements in the root array
+        """
+        The if i % 2 == 1 statement is used to create a specific pattern in the filter root. It sets certain values 
+        in the root to a specific value, while leaving others at 0. This pattern is used to create a specific shape
+        of the root, which is used to apply a specific type of filter to the sinogram. This way we remove certain types
+        of noise from the sinogram.
+        """
+        if i % 2 == 1:
+            root[element_in_the_middle + i, element_in_the_middle] = root[element_in_the_middle - i,
+                                                                          element_in_the_middle] = (-4 / np.pi ** 2) / (
+                        i ** 2)
+
+    # applying a convolution operation on each row of the sinogram array using the root
+    sinogram_filtered = np.apply_along_axis(lambda x: np.convolve(x, root[:, element_in_the_middle], mode='same'),
+                                            axis=1, arr=sinogram_filtered)
+
+    return sinogram_filtered
 
 
 if __name__ == '__main__':
