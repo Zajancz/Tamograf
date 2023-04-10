@@ -1,8 +1,10 @@
 import cv2
 import skimage
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.transform import iradon
+
 
 def generate_points_between_2(coordinates, width):
     """
@@ -253,7 +255,8 @@ def sinogram_creation(image_read, width, height, angle, number_of_detectors, num
     reversed_array = sinogram_array[::-1]
     sinogram_image = np.array(reversed_array)
 
-    reversed_image = Radon_transform_reverse(sinogram_image, width, height, lines_array)
+    # This line is used to generate reconstructed images at n-th scan iteration
+    Radon_transform_reverse(sinogram_image, width, height, lines_array, iterations=75)
     plt.subplot(131)
     plt.imshow(image_read, cmap='gray')
     plt.title('Input Image')
@@ -262,15 +265,29 @@ def sinogram_creation(image_read, width, height, angle, number_of_detectors, num
     plt.imshow(sinogram_image, cmap='gray')
     plt.title('Sinogram')
 
+    output_image, copy_image_n_iteration = Radon_transform_reverse(sinogram_image, width, height, lines_array)
     plt.subplot(133)
-    plt.imshow(reversed_image, cmap='gray')
+    plt.imshow(output_image, cmap='gray')
     plt.title('Output Image (Unfiltered)')
     plt.show()
 
 
-def Radon_transform_reverse(sinogram, width, height, lines_array):
+def save_image_at_iteration(reconstructed_image, n):
+    # create the "stages" subdirectory if it does not exist
+    os.makedirs("stages", exist_ok=True)
+
+    # save the image to the "stages" subdirectory
+    filename = f"stages/iteration_{n}.png"
+    plt.imshow(reconstructed_image, cmap='gray')
+    plt.axis('off')
+    plt.savefig(filename, bbox_inches='tight')
+
+
+def Radon_transform_reverse(sinogram, width, height, lines_array, iterations=None):
     # first initializes a 2D array with zeros
     reconstructed_image = np.zeros((width, height))
+
+    copy_image_n_iteration = []
 
     """
     Using nested loops we iterate over each element of the sinogram and the lines array. For each line in the lines 
@@ -290,10 +307,19 @@ def Radon_transform_reverse(sinogram, width, height, lines_array):
             angle_idx += 1
         line_idx += 1
 
+        # save the reconstructed image at the specified iteration
+        if iterations and len(copy_image_n_iteration) == iterations:
+            save_image_at_iteration(np.flipud(reconstructed_image), iterations)
+            return np.flipud(reconstructed_image), copy_image_n_iteration
+
+        # append a copy of the current state of the reconstructed image to the copy_image_n_iteration list
+        copy_image_n_iteration.append(np.copy(np.flipud(reconstructed_image)))
+
     # finally reverse an image
     reversed_image = np.flipud(reconstructed_image)
 
-    return reversed_image
+    return reversed_image, copy_image_n_iteration
+
 
 
 if __name__ == '__main__':
@@ -305,7 +331,8 @@ if __name__ == '__main__':
     width, height = np.shape(image_read)
     print("Width {w}\t Height {h}".format(w=width, h=height))
 
-    sinogram_creation(image_read, width, height, 1, 220, 220, additive_or_substractive=True)
+    sinogram_creation(image_read, width, height, 1, 220, 220, additive_or_substractive=False)
+
 
 
 
