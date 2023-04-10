@@ -283,6 +283,7 @@ def sinogram_creation(image_read, width, height, angle, number_of_detectors, num
     plt.imshow(output_image_filtered, cmap='gray')
     plt.title('Filtered Output Image')
     plt.show()
+    print(f"Mean square error: {Mean_square_error(image_read, image_read)}")
 
 
 def save_image_at_iteration(reconstructed_image, n):
@@ -367,6 +368,20 @@ def Filter_Sinogram(sinogram, mask_size=11):
 
     return sinogram_filtered
 
+
+def Mean_square_error(image_original, image_filtered):
+    assert image_original.shape == image_filtered.shape, "Images have different shapes!"
+
+    # Find the difference between the original and filtered images
+    diff = image_original - image_filtered
+
+    # Square the difference and calculate the mean
+    mse = np.mean(np.square(diff))
+
+    # Calculate the square root of the mean squared error (MSE) to get the root mean squared error (RMSE)
+    rmse = np.sqrt(mse)
+
+    return rmse
 
 if __name__ == '__main__':
     image = 'Images\kolko.png'
